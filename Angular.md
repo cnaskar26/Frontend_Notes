@@ -431,7 +431,7 @@ Component Destroyed
 
 ---
 
- ## 1\. `constructor()`
+ #. `constructor()`
 
  The TypeScript constructor runs when the class is instantiated.
 
@@ -956,5 +956,530 @@ CounterComponent
 | Usually one shared instance | New instance for that component injector |
 | Common for application-wide services | Useful for isolated state |
 | Supports tree-shaking | Provider exists for that component subtree |
+
+---
+
+
+# Parent–Child Communication in Angular
+
+ Angular provides several ways for a **parent component and child component to communicate**.
+
+ A simple mental model:
+
+```
+                Parent
+              /        \
+         @Input()     @ViewChild()
+            ↓              ↓
+          Child  ←─────────
+            │
+         @Output()
+            │
+            ↓
+          Parent
+```
+
+ > In modern Angular, you may also see the newer `input()` and `output()` APIs. The concepts are the same; `@Input()` and `@Output()` remain very important for interviews and existing codebases.
+
+---
+
+ ## 1\. `@Input()` — Parent to Child
+
+ `@Input()` is used when the **parent wants to send data to the child**.
+
+ ### Parent component
+
+```
+export class ParentComponent {
+  userName = 'John';
+  age = 25;
+}
+```
+
+ ### Parent template
+
+```
+<app-child
+  [name]="userName"
+  [userAge]="age">
+</app-child>
+```
+
+ ### Child component
+
+```
+export class ChildComponent {
+  @Input() name!: string;
+  @Input() userAge!: number;
+}
+```
+
+ ### Child template
+
+```
+<p>Name: {{ name }}</p>
+<p>Age: {{ userAge }}</p>
+```
+
+ The data flow is:
+
+```
+Parent
+  │
+  │ [name]="userName"
+  │ [userAge]="age"
+  ↓
+Child
+  │
+  ├── name
+  └── userAge
+```
+
+ ### What happens when the value changes?
+
+ Suppose:
+
+```
+userName = 'John';
+```
+
+ Later:
+
+```
+userName = 'David';
+```
+
+ Angular updates the child's input.
+
+ The child can react to this change using `ngOnChanges()`:
+
+```
+@Input() name!: string;
+
+ngOnChanges(changes: SimpleChanges) {
+  console.log(changes['name']);
+}
+```
+
+---
+
+ ## 2\. `@Output()` — Child to Parent
+
+ `@Output()` is used when the **child needs to send an event/data back to the parent**.
+
+ The child doesn't directly modify the parent's property. Instead, it **emits an event**, and the parent listens to it.
+
+ ### Child component
+
+```
+import { EventEmitter, Output } from '@angular/core';
+
+export class ChildComponent {
+
+  @Output() userSelected = new EventEmitter<string>();
+
+  selectUser() {
+    this.userSelected.emit('John');
+  }
+}
+```
+
+ ### Child template
+
+```
+<button (click)="selectUser()">
+  Select User
+</button>
+```
+
+ ### Parent template
+
+```
+<app-child
+  (userSelected)="onUserSelected($event)">
+</app-child>
+```
+
+ ### Parent component
+
+```
+export class ParentComponent {
+
+  onUserSelected(name: string) {
+    console.log('Selected:', name);
+  }
+}
+```
+
+ The flow is:
+
+```
+Child
+  │
+  │ userSelected.emit('John')
+  ↓
+Parent
+  │
+  │ (userSelected)
+  ↓
+onUserSelected($event)
+```
+
+ `$event` contains the value emitted by the child.
+
+---
+
+ ## 3\. Why use `EventEmitter`?
+
+ `EventEmitter` allows a child component to **emit an event/value** that the parent can listen to.
+
+ Example:
+
+```
+@Output()
+save = new EventEmitter<User>();
+
+this.save.emit(user);
+```
+
+ Parent:
+
+```
+<app-user (save)="saveUser($event)">
+</app-user>
+```
+
+ This creates a clean communication pattern:
+
+```
+Child → Event → Parent
+```
+
+---
+
+ ## 4\. `@ViewChild()` — Parent Accessing Child
+
+ `@ViewChild()` is different from `@Input()` and `@Output()`.
+
+ It allows a parent component to **get a reference to a child component or an element in its own template**.
+
+ For example:
+
+ ### Child
+
+```
+export class ChildComponent {
+
+  reset() {
+    console.log('Child reset');
+  }
+
+}
+```
+
+ ### Parent template
+
+```
+<app-child></app-child>
+```
+
+ ### Parent component
+
+```
+export class ParentComponent {
+
+  @ViewChild(ChildComponent)
+  child!: ChildComponent;
+
+  resetChild() {
+    this.child.reset();
+  }
+
+}
+```
+
+ Now the parent can call the child's method:
+
+```
+Parent
+  │
+  │ @ViewChild
+  ↓
+Child instance
+  │
+  ↓
+child.reset()
+```
+
+---
+
+ ## 5\. Why `@ViewChild()` is different
+
+ Compare the three:
+
+ | Mechanism | Direction | Purpose |
+| --- | --- | --- |
+| `@Input()` | Parent → Child | Pass data |
+| `@Output()` | Child → Parent | Send events/data |
+| `@ViewChild()` | Parent → Child | Get child reference and interact with it |
+
+### Example
+
+```
+                 Parent
+                /      \
+          @Input()     @ViewChild()
+             ↓             ↓
+           Child ←──────────
+             │
+          @Output()
+             │
+             ↓
+           Parent
+```
+
+---
+
+ ## 6\. `@ViewChild()` with Template Reference
+
+ You don't have to use `@ViewChild()` only for components.
+
+ You can reference an element:
+
+```
+<input #username>
+```
+
+ Then:
+
+```
+@ViewChild('username')
+usernameInput!: ElementRef<HTMLInputElement>;
+```
+
+ You could then access the element:
+
+```
+this.usernameInput.nativeElement.focus();
+```
+
+ However, direct DOM manipulation should generally be minimized in Angular; prefer Angular APIs and bindings where possible.
+
+---
+
+ ## 7\. `@ViewChild()` and `ngAfterViewInit()`
+
+ **"When is `@ViewChild()` available?"**
+
+ For a view child that is initialized with the component's view, you commonly access it in:
+
+```
+ngAfterViewInit() {
+  this.child.reset();
+}
+```
+
+ Example:
+
+```
+@ViewChild(ChildComponent)
+child!: ChildComponent;
+
+ngAfterViewInit() {
+  this.child.reset();
+}
+```
+
+ Why?
+
+ Because the component's view needs to be initialized before Angular can provide the view-child reference.
+
+---
+
+ ## 8\. `@Input()` vs `@ViewChild()`
+
+ ### `@Input()`
+
+ Use when the parent is **passing data**.
+
+```
+<app-child [user]="user"></app-child>
+```
+
+ This is declarative and is generally preferred for normal parent → child data flow.
+
+ ### `@ViewChild()`
+
+ Use when the parent needs to **access the child instance**.
+
+```
+@ViewChild(ChildComponent)
+child!: ChildComponent;
+
+this.child.reset();
+```
+
+ So:
+
+ > **`@Input()` passes data; `@ViewChild()` gives the parent a reference to the child.**
+
+---
+
+ ## 9\. `@Output()` vs `@ViewChild()`
+
+ Suppose a child has:
+
+```
+save() {
+  // save logic
+}
+```
+
+ The parent could call it using:
+
+```
+@ViewChild(ChildComponent)
+child!: ChildComponent;
+
+this.child.save();
+```
+
+ But if the child needs to notify the parent that something happened, use `@Output()`:
+
+```
+@Output() saved = new EventEmitter<User>();
+
+this.saved.emit(user);
+```
+
+ Parent:
+
+```
+<app-child (saved)="handleSave($event)">
+</app-child>
+```
+
+ ### Difference
+
+```
+@ViewChild()
+Parent directly controls/accesses Child
+
+@Output()
+Child notifies Parent through an event
+```
+
+---
+
+ ## 10\. Complete Example
+
+ Imagine we have:
+
+```
+ParentComponent
+       │
+       │ sends user
+       ↓
+ChildComponent
+       │
+       │ user saved event
+       ↓
+ParentComponent
+```
+
+ ### Child
+
+```
+@Component({
+  selector: 'app-child',
+  template: `
+    <h3>{{ user.name }}</h3>
+    <button (click)="save()">Save</button>
+  `
+})
+export class ChildComponent {
+
+  @Input() user!: User;
+
+  @Output() saved = new EventEmitter<User>();
+
+  save() {
+    this.saved.emit(this.user);
+  }
+
+  reset() {
+    console.log('Reset child');
+  }
+}
+```
+
+ ### Parent
+
+```
+@Component({
+  selector: 'app-parent',
+  template: `
+    <app-child
+      [user]="user"
+      (saved)="onSaved($event)">
+    </app-child>
+
+    <button (click)="resetChild()">
+      Reset Child
+    </button>
+  `
+})
+export class ParentComponent {
+
+  user = {
+    name: 'John'
+  };
+
+  @ViewChild(ChildComponent)
+  child!: ChildComponent;
+
+  onSaved(user: User) {
+    console.log('User saved:', user);
+  }
+
+  resetChild() {
+    this.child.reset();
+  }
+}
+```
+
+ Here we're using all three:
+
+```
+@Input()
+Parent ──────────────→ Child
+       user
+
+@Output()
+Child ───────────────→ Parent
+       saved event
+
+@ViewChild()
+Parent ──────────────→ Child
+       child reference
+```
+
+---
+
+ ## 11\. What if Components Are Not Direct Parent/Child?
+
+ If components are unrelated:
+
+```
+Component A       Component B
+      │                │
+      └──────┬─────────┘
+             ↓
+       Shared Service
+```
+
+ A shared service can be used for communication/state sharing.
+
+ For larger applications, Angular Signals or dedicated state-management patterns can also be used depending on the application's requirements.
 
 ---
