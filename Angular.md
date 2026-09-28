@@ -121,10 +121,6 @@ export class UserService {
 
  A component can consume this service through **Dependency Injection**.
 
- ### Interview point
-
- > Components should primarily manage UI-related concerns, while reusable business or data-access logic can be moved into services.
-
 ---
 
  ## 5\. Dependency Injection (DI)
@@ -245,8 +241,6 @@ export const routes: Routes = [
 
  ## 9\. Modules vs Modern Angular
 
- This is an important **interview topic**.
-
  Older Angular applications commonly organized functionality using **NgModules**:
 
 ```
@@ -270,8 +264,6 @@ AppModule
 })
 export class UserComponent {}
 ```
-
- So, in an interview, avoid saying **"every Angular application must use NgModules."** Modern Angular can be built using standalone components and related standalone APIs.
 
 ---
 
@@ -452,10 +444,6 @@ Component Destroyed
 constructor(private userService: UserService) {}
 ```
 
- ### Interview point
-
- Don't use `constructor()` for Angular initialization logic that depends on inputs or the initialized view.
-
 ---
 
  ## 2\. `ngOnChanges()`
@@ -507,14 +495,6 @@ ngOnInit() {
 }
 ```
 
- ### Interview question
-
- **Q: `constructor()` vs `ngOnInit()`?**
-
- **Answer:**
-
- > The constructor is a JavaScript/TypeScript class initialization mechanism and is primarily used for dependency injection. `ngOnInit()` is an Angular lifecycle hook and is used for initialization after Angular has initialized the component's inputs.
-
 ---
 
  ## 4\. `ngDoCheck()`
@@ -528,10 +508,6 @@ ngDoCheck() {
 ```
 
  It can run **very frequently**, so avoid expensive operations here.
-
- ### Interview point
-
- Use it only when you need custom change-detection behavior that Angular's normal mechanisms don't cover.
 
 ---
 
@@ -588,11 +564,6 @@ ngAfterViewInit() {
 ```
 <input #input>
 ```
-
- ### Interview distinction
-
-- `ngAfterContentInit()` → projected content (`ng-content`)
-- `ngAfterViewInit()` → component's own view and child views
 
 ---
 
@@ -651,8 +622,6 @@ ngOnDestroy() {
 | Doesn't mean Angular component is fully initialized | Component inputs are available |
 
 ## Dependency Injection (DI) and DI Hierarchy in Angular
-
- This is another **very common Angular interview topic**.
 
  ## 1. What is Dependency Injection?
 
@@ -804,8 +773,6 @@ Application / Environment Injector
         Component
 ```
 
- The exact injector structure can be more nuanced in modern Angular, but this model is useful for interviews.
-
 ---
 
  ## 5\. Root-Level Provider
@@ -909,8 +876,6 @@ ParentComponent
 ---
 
  ## 8\. How Angular Searches for a Dependency
-
- This is particularly important for interviews.
 
  Suppose a component requests:
 
