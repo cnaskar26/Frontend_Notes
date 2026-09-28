@@ -303,7 +303,7 @@ Parent
 
 ---
 
- ## 11\. HTTP and API Communication
+ ## 1 HTTP and API Communication
 
  Angular provides `HttpClient` for communicating with backend APIs.
 
@@ -688,7 +688,7 @@ export class UserComponent {
 
 ---
 
- # 2\. How Angular DI Works
+ ## 2\. How Angular DI Works
 
  Consider:
 
@@ -738,7 +738,7 @@ Injected into UserComponent
 
 ---
 
- # 3\. What is a Provider?
+ ## 3\. What is a Provider?
 
  A provider defines how Angular should create or supply a dependency.
 
@@ -781,7 +781,7 @@ providers: [
 
 ---
 
- # 4\. DI Hierarchy
+ ## 4\. DI Hierarchy
 
  Angular uses a **hierarchical dependency injection system**.
 
@@ -808,7 +808,7 @@ Application / Environment Injector
 
 ---
 
- # 5\. Root-Level Provider
+ ## 5\. Root-Level Provider
 
  The most common approach is:
 
@@ -839,7 +839,7 @@ Application
 
 ---
 
- # 6\. Component-Level Provider
+ ## 6\. Component-Level Provider
 
  You can provide a service directly on a component:
 
@@ -871,7 +871,7 @@ Root Injector
 
 ---
 
- # 7\. Child Components and DI Hierarchy
+ ## 7\. Child Components and DI Hierarchy
 
  Suppose:
 
@@ -908,7 +908,7 @@ ParentComponent
 
 ---
 
- # 8\. How Angular Searches for a Dependency
+ ## 8\. How Angular Searches for a Dependency
 
  This is particularly important for interviews.
 
@@ -942,7 +942,7 @@ NullInjectorError
 
 ---
 
- # 9\. Example of Different Instances
+ ## 9\. Example of Different Instances
 
  Consider:
 
@@ -983,7 +983,7 @@ CounterComponent
 
 ---
 
- # 10\. `providedIn: 'root'` vs Component `providers`
+ ## 10\. `providedIn: 'root'` vs Component `providers`
 
  | `providedIn: 'root'` | `providers: [Service]` |
 | --- | --- |
