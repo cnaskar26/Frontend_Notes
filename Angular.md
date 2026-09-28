@@ -1483,3 +1483,490 @@ Component A       Component B
  For larger applications, Angular Signals or dedicated state-management patterns can also be used depending on the application's requirements.
 
 ---
+# Angular Change Detection, `OnPush`, and `ChangeDetectorRef`
+
+---
+
+ ## 1\. What is Change Detection?
+
+ **Change detection is Angular's mechanism for detecting changes in application state and updating the DOM accordingly.**
+
+ For example:
+
+```
+name = 'John';
+
+changeName() {
+  this.name = 'David';
+}
+```
+
+ Template:
+
+```
+<h2>{{ name }}</h2>
+```
+
+ When `name` changes, Angular's change-detection mechanism determines that the template needs to be updated.
+
+ Conceptually:
+
+```
+Application state changes
+        ↓
+Angular runs change detection
+        ↓
+Angular checks component templates
+        ↓
+Changed bindings are detected
+        ↓
+DOM is updated
+```
+
+ ### Important point
+
+ Change detection doesn't mean Angular blindly recreates the entire DOM.
+
+ Angular evaluates the relevant bindings and updates the DOM where necessary.
+
+---
+
+ ## 2\. Default Change Detection
+
+ Angular has two main component change-detection strategies:
+
+```
+ChangeDetectionStrategy.Default
+ChangeDetectionStrategy.OnPush
+```
+
+ `Default` is the normal strategy if you don't specify one.
+
+ Example:
+
+```
+@Component({
+  selector: 'app-user',
+  changeDetection: ChangeDetectionStrategy.Default
+})
+```
+
+ With the default strategy, Angular checks the component during normal application change-detection cycles.
+
+ For example, events such as:
+
+```
+Click
+Timer
+HTTP response
+Observable activity
+Other async operations
+```
+
+ can cause Angular to run change detection.
+
+ A simplified view:
+
+```
+Application
+     ↓
+Angular runs change detection
+     ↓
+Parent
+     ↓
+Child
+     ↓
+Grandchild
+     ↓
+...
+```
+
+---
+
+ ## 3\. What is `OnPush`?
+
+ `OnPush` is a change-detection strategy that allows Angular to **skip unnecessary checking of a component subtree under certain conditions**.
+
+ Example:
+
+```
+@Component({
+  selector: 'app-user',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class UserComponent {}
+```
+
+ The goal is generally to improve performance by reducing unnecessary checks.
+
+---
+
+ ## 4\. When Does an `OnPush` Component Get Checked?
+
+ An `OnPush` component can be checked when, among other cases:
+
+ ### 1\. An input reference changes
+
+```
+<app-user [user]="user"></app-user>
+```
+
+ If:
+
+```
+this.user = newUser;
+```
+
+ the input reference changes, so Angular can check the child.
+
+ But consider:
+
+```
+this.user.name = 'David';
+```
+
+ The object reference is still the same.
+
+```
+Before: user → Object A
+After:  user → Object A
+```
+
+ So simply mutating the object does **not** provide a new input reference.
+
+ Instead:
+
+```
+this.user = {
+  ...this.user,
+  name: 'David'
+};
+```
+
+ Now:
+
+```
+Before: user → Object A
+After:  user → Object B
+```
+
+ The reference changed.
+
+---
+
+ ### 2\. An event occurs in the component's subtree
+
+ For example:
+
+```
+<button (click)="save()">Save</button>
+```
+
+ An event handled within the component/subtree can cause Angular to check the relevant `OnPush` component.
+
+---
+
+ ### 3\. An observable/signal-driven update is used through Angular's reactive mechanisms
+
+ For example, Angular's `async` pipe can mark the relevant view for checking when a new value arrives.
+
+ Signals also integrate with Angular's change-detection system.
+
+---
+
+ ### 4\. You explicitly request checking
+
+ You can use `ChangeDetectorRef`, which we'll discuss below.
+
+---
+
+ ## 5\. Why Object Mutation Is a Common Question
+
+ Consider:
+
+```
+user = {
+  name: 'John'
+};
+```
+
+ Child:
+
+```
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class ChildComponent {
+  @Input() user!: User;
+}
+```
+
+ Parent does:
+
+```
+this.user.name = 'David';
+```
+
+ The object reference hasn't changed.
+
+```
+user ─────→ Object A
+             name = David
+```
+
+ A new object is preferable:
+
+```
+this.user = {
+  ...this.user,
+  name: 'David'
+};
+```
+
+ Now:
+
+```
+user ─────→ Object B
+```
+
+ This is why **immutable update patterns** work particularly well with `OnPush`.
+
+---
+
+ ## 6\. `ChangeDetectorRef`
+
+ `ChangeDetectorRef` is an Angular API that allows you to **interact with Angular's change-detection mechanism for a view**.
+
+ Inject it:
+
+```
+constructor(private cdr: ChangeDetectorRef) {}
+```
+
+ It provides methods such as:
+
+```
+markForCheck()
+detectChanges()
+detach()
+reattach()
+checkNoChanges()
+```
+
+ The two most important are:
+
+```
+markForCheck()
+detectChanges()
+```
+
+---
+
+ ## 7\. `markForCheck()`
+
+ `markForCheck()` tells Angular:
+
+ > **"This component/view should be checked during a future change-detection run."**
+
+ Example:
+
+```
+constructor(private cdr: ChangeDetectorRef) {}
+
+updateUser() {
+  this.user.name = 'David';
+
+  this.cdr.markForCheck();
+}
+```
+
+ This is particularly useful with `OnPush` when you've changed state in a way where Angular isn't otherwise going to schedule/check the view as needed.
+
+ ### Important distinction
+
+ `markForCheck()` **doesn't immediately perform change detection**.
+
+ It marks the view so that it will be checked when Angular performs its next appropriate change-detection pass.
+
+---
+
+ ## 8\. `detectChanges()`
+
+ `detectChanges()` tells Angular to **immediately perform change detection for the view and its descendants**.
+
+ Example:
+
+```
+this.user.name = 'David';
+
+this.cdr.detectChanges();
+```
+
+ Conceptually:
+
+```
+State changed
+    ↓
+detectChanges()
+    ↓
+Check this view/subtree now
+    ↓
+DOM updated
+```
+
+ ### `markForCheck()` vs `detectChanges()`
+
+ | `markForCheck()` | `detectChanges()` |
+| --- | --- |
+| Marks view as needing checking | Runs change detection immediately |
+| Does not immediately check | Immediately checks the view/subtree |
+| Waits for a suitable change-detection pass | Explicitly triggers a check |
+| Common with `OnPush` | Useful when immediate/local checking is specifically needed |
+
+---
+
+ ## 9\. `detach()` and `reattach()`
+
+ `detach()` removes a view from the normal change-detection tree.
+
+```
+this.cdr.detach();
+```
+
+ Angular will no longer automatically check that view as part of the normal change-detection traversal.
+
+ You can manually check it:
+
+```
+this.cdr.detectChanges();
+```
+
+ And later reattach it:
+
+```
+this.cdr.reattach();
+```
+
+ This can be useful for specialized performance scenarios, but it should not be used casually.
+
+---
+
+ ## 10\. Example: `OnPush` \+ `ChangeDetectorRef`
+
+```
+@Component({
+  selector: 'app-user',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <h2>{{ user.name }}</h2>
+    <button (click)="update()">Update</button>
+  `
+})
+export class UserComponent {
+
+  user = {
+    name: 'John'
+  };
+
+  constructor(private cdr: ChangeDetectorRef) {}
+
+  update() {
+    this.user.name = 'David';
+
+    this.cdr.markForCheck();
+  }
+}
+```
+
+ Here:
+
+ 1. Component uses `OnPush`.
+2. The object is mutated.
+3. `markForCheck()` tells Angular the view needs checking.
+4. Angular checks it during the next appropriate change-detection pass.
+
+ However, an even cleaner approach is often to use immutable updates:
+
+```
+this.user = {
+  ...this.user,
+  name: 'David'
+};
+```
+
+---
+
+ ## 11\. Change Detection Flow
+
+ A simplified model is:
+
+```
+          Application
+               │
+               ↓
+       Change Detection
+               │
+       ┌───────┴────────┐
+       ↓                ↓
+   Component A       Component B
+       │
+       ↓
+     Child
+       │
+       ↓
+      DOM
+```
+
+ With `OnPush`, Angular can skip checking certain subtrees when their relevant inputs/state haven't indicated that they need checking.
+
+```
+Application
+    │
+    ├── Component A
+    │       ↓
+    │    Checked
+    │
+    └── Component B
+            ↓
+        OnPush + no trigger
+            ↓
+          Skipped
+```
+
+ This is the main performance advantage of `OnPush`.
+
+---
+
+ ## 12\. Default vs `OnPush`
+
+| Default | OnPush |
+| --- | --- |
+| More broadly participates in change detection | Allows Angular to skip checks when appropriate |
+| Easier to reason about initially | More explicit/reactive approach |
+| Can perform more checks | Can reduce unnecessary checks |
+| Less sensitive to object mutation | Works best with immutable state/reference changes |
+| Good default for many applications | Useful for performance-sensitive/componentized applications |
+
+---
+
+```
+Change Detection
+      ↓
+Keeps UI synchronized with state
+
+OnPush
+      ↓
+Reduce unnecessary checking
+
+ChangeDetectorRef
+      ↓
+Control/interact with checking
+
+markForCheck()
+      ↓
+"Check me in the next appropriate cycle"
+
+detectChanges()
+      ↓
+"Check me now"
+```
