@@ -1970,3 +1970,186 @@ detectChanges()
       ↓
 "Check me now"
 ```
+
+## Observable vs Promise
+
+ ### 1\. Observable
+
+ An **Observable** represents a stream of values that can arrive **over time**.
+
+```
+const observable$ = new Observable(observer => {
+  observer.next(1);
+  observer.next(2);
+  observer.next(3);
+});
+```
+
+ To receive the values, you **subscribe**:
+
+```
+observable$.subscribe(value => {
+  console.log(value);
+});
+```
+
+ Output:
+
+```
+1
+2
+3
+```
+
+ ### 2\. Promise
+
+ A **Promise** represents **one eventual result**—either success or failure.
+
+```
+const promise = new Promise(resolve => {
+  resolve(10);
+});
+
+promise.then(value => {
+  console.log(value);
+});
+```
+
+ Output:
+
+```
+10
+```
+
+ ### Differences
+
+ | Observable | Promise |
+| --- | --- |
+| Can emit **multiple values** | Produces **one value** |
+| Can be synchronous or asynchronous | Usually represents an asynchronous result |
+| Starts when subscribed to (cold observable) | Starts immediately when created |
+| Can be cancelled using `unsubscribe()` | Native Promise cannot be cancelled |
+| Supports operators like `map`, `filter`, `switchMap`, `debounceTime` | Uses `then`, `catch`, `finally` |
+| Can emit `next`, `error`, and `complete` | Resolves or rejects |
+| Common in Angular/RxJS | Common JavaScript API |
+
+### Example
+
+ Think of:
+
+ **Promise:**
+
+ > "Give me the result of this HTTP request."
+
+ **Observable:**
+
+ > "Keep giving me values whenever they occur."
+
+ For example, a search box can produce:
+
+```
+"a"
+"an"
+"ang"
+"angu"
+"angular"
+```
+
+ An Observable is naturally suited to this continuous stream.
+
+---
+
+ # Subject vs BehaviorSubject
+
+ Both are **RxJS Subjects**.
+
+ A Subject is special because it is both:
+
+ - an **Observable** — you can subscribe to it.
+- an **Observer** — you can call `next()` on it.
+
+```
+const subject = new Subject<number>();
+
+subject.subscribe(value => console.log("A:", value));
+
+subject.next(10);
+subject.next(20);
+```
+
+ Output:
+
+```
+A: 10
+A: 20
+```
+
+ ## Subject
+
+ A normal `Subject` **does not store the latest value**.
+
+```
+const subject = new Subject<number>();
+
+subject.next(10);
+
+subject.subscribe(value => {
+  console.log(value);
+});
+```
+
+ The subscriber receives **nothing**, because `10` was emitted before it subscribed.
+
+---
+
+ ## BehaviorSubject
+
+ A `BehaviorSubject` **stores the latest value** and immediately gives that value to a new subscriber.
+
+ It **requires an initial value**.
+
+```
+const subject = new BehaviorSubject<number>(0);
+
+subject.next(10);
+
+subject.subscribe(value => {
+  console.log(value);
+});
+```
+
+ Output:
+
+```
+10
+```
+
+ The subscriber immediately receives the latest value.
+
+ ### Example
+
+```
+const user$ = new BehaviorSubject<string>("Guest");
+
+user$.subscribe(user => {
+  console.log(user);
+});
+
+user$.next("John");
+```
+
+ Output:
+
+```
+Guest
+John
+```
+
+ ### Main difference
+
+| Subject | BehaviorSubject |
+| --- | --- |
+| Doesn't retain current value | Retains latest value |
+| No initial value required | Initial value required |
+| New subscriber gets only future emissions | New subscriber immediately gets latest value |
+| `new Subject()` | `new BehaviorSubject(initialValue)` |
